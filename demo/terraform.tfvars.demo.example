@@ -1,0 +1,58 @@
+# ===========================================================================
+# DEMO / LOW-COST — terraform.tfvars
+# Copy this file to terraform.tfvars and fill in your API key.
+# Never commit terraform.tfvars to source control.
+#
+# Estimated cost:  ~$0.21/hr  |  ~$150/mo  |  <$2 for a 10-hour demo day
+# Destroy when done:  terraform destroy
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Required
+# ---------------------------------------------------------------------------
+
+ibmcloud_api_key = "<YOUR_IBM_CLOUD_API_KEY>"
+region           = "us-south"
+
+# ---------------------------------------------------------------------------
+# Naming & tagging
+# ---------------------------------------------------------------------------
+
+prefix              = "ocp-demo"
+resource_group_name = null             # null creates "ocp-demo-rg"
+resource_tags       = ["env:demo", "cost:minimal"]
+access_tags         = []
+
+# ---------------------------------------------------------------------------
+# VPC — single zone, single subnet
+# ---------------------------------------------------------------------------
+
+vpc_name             = "vpc"
+enable_vpc_flow_logs = false           # keep false to avoid COS write charges
+
+# Single subnet — override only if 10.10.10.0/24 clashes with your network.
+# subnets = {
+#   zone-1 = [
+#     { name = "worker-zone-1", cidr = "10.10.10.0/24", public_gateway = true, acl_name = "vpc-acl" }
+#   ]
+# }
+
+# ---------------------------------------------------------------------------
+# OpenShift cluster — smallest viable sizing
+# ---------------------------------------------------------------------------
+
+cluster_name            = "roks-demo"
+ocp_version             = null         # null = IBM Cloud default
+disable_public_endpoint = false
+
+# bx2.2x8: 2 vCPU / 8 GB — minimum for ROKS system pods.
+# 1 worker × 1 zone = 1 node total.  Upgrade to bx2.4x16 if workloads need more.
+worker_pools = [
+  {
+    pool_name        = "default"
+    machine_type     = "bx2.2x8"
+    workers_per_zone = 1
+    operating_system = "REDHAT_8_64"
+    subnet_prefix    = "worker"
+  }
+]

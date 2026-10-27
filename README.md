@@ -84,8 +84,72 @@ resource_group  →  cos  →  vpc  →  openshift
 | Requirement | Notes |
 |---|---|
 | Terraform ≥ 1.3.0 | `terraform version` |
-| IBM Cloud API key | Must have Editor on VPC, ROKS, COS, and Resource Groups |
+| IBM Cloud API key | See below — must have Editor on VPC, ROKS, COS, and Resource Groups |
 | IBM Cloud CLI (optional) | Useful for `ibmcloud ks cluster config` after deploy |
+
+---
+
+## Finding your IBM Cloud API key
+
+An API key is a credential that lets Terraform (and the scripts) authenticate as you against IBM Cloud. **It is only shown once at creation — copy or download it immediately.**
+
+### Option A — IBM Cloud console (recommended for new keys)
+
+1. Log in at [cloud.ibm.com](https://cloud.ibm.com).
+2. In the top navigation bar, go to **Manage → Access (IAM)**.
+3. In the left sidebar, click **API keys**.
+4. Click **Create an IBM Cloud API key**.
+5. Give it a name (e.g. `terraform-ocp-demo`) and an optional description.
+6. Click **Create**.
+7. Click **Copy** or **Download** to save the key — you **cannot retrieve it again** after closing this dialog.
+
+> **Direct link:** https://cloud.ibm.com/iam/apikeys
+
+### Option B — IBM Cloud CLI
+
+If you already have the CLI installed and are logged in:
+
+```bash
+ibmcloud iam api-key-create terraform-ocp-demo \
+  -d "Used by Terraform for VPC + OpenShift deployment" \
+  --file ~/.ibmcloud/terraform-ocp-demo.json
+```
+
+The key is written to the JSON file. Extract it with:
+
+```bash
+cat ~/.ibmcloud/terraform-ocp-demo.json | grep '"apikey"'
+```
+
+Store it somewhere secure (a password manager, or IBM Cloud Secrets Manager) and never commit it to source control.
+
+### Required IAM permissions
+
+The key inherits the permissions of the user who creates it. The user (or a Service ID the key belongs to) needs at minimum:
+
+| Service | Required platform role |
+|---|---|
+| Resource Group | Viewer (to target an existing group) or Administrator (to create one) |
+| VPC Infrastructure | Editor (create VPC, subnets, public gateways, security groups) |
+| Kubernetes Service (ROKS) | Administrator (create and delete clusters) |
+| Cloud Object Storage | Editor (create instance and bucket) |
+
+To check or assign your own access: **Manage → Access (IAM) → Users → your name → Access**.
+
+### Using the key
+
+**In `terraform.tfvars`** (never commit this file):
+```hcl
+ibmcloud_api_key = "abc123..."
+```
+
+**As an environment variable** (preferred for CI or shared machines — takes precedence over tfvars):
+```bash
+export IBMCLOUD_API_KEY="abc123..."
+./demo-up.sh
+```
+
+> The Terraform IBM provider automatically reads `IBMCLOUD_API_KEY` from the environment, so you do not need to set it in tfvars at all if the env var is present.
 
 ---
 
@@ -241,3 +305,95 @@ terraform destroy
 ```
 
 > **Note:** By default, destroying the cluster does **not** delete attached block-storage PVCs. Set `force_delete_storage = true` on the OpenShift module if you want storage deleted alongside the cluster.
+
+---
+
+## Demo / low-cost configuration (`demo/`)
+
+A second, "skinflint cheap" configuration lives in the [`demo/`](demo/) subdirectory. It uses the same modules as the production config but cuts costs by ~80% by right-sizing everything for a single-session demo.
+
+### Key differences
+
+| | Production (`./`) | Demo (`demo/`) |
+|---|---|---|
+| Availability zones | 3 | 1 |
+| Subnets | 6 (worker + LB per zone) | 1 (worker only) |
+| Worker machine | `bx2.4x16` (4 vCPU / 16 GB) | `bx2.2x8` (2 vCPU / 8 GB) |
+| Workers total | 6 (2 per zone) | 1 |
+| Public Gateways | 3 | 1 |
+| VPC flow logs | enabled | disabled |
+| **Estimated cost** | **~$760–775/mo** | **~$150/mo · ~$0.21/hr** |
+
+> For a 10-hour demo day the total spend is **under $2**. Run `terraform destroy` when done to stop all charges.
+
+### Demo files
+
+```
+demo/
+├── versions-demo.tf              # Provider constraints (identical to production)
+├── variables-demo.tf             # Slimmed-down variable set with demo defaults
+├── main-demo.tf                  # Single-zone module composition
+├── outputs-demo.tf               # Key outputs + a cost_reminder output
+└── terraform.tfvars.demo.example # Copy → terraform.tfvars and fill in API key
+```
+
+### Quick start — scripted (recommended)
+
+Two helper scripts at the repo root automate the entire lifecycle, including IBM Cloud CLI login and kubeconfig setup:
+
+```bash
+# One-time setup: copy and fill in your API key
+cp demo/terraform.tfvars.demo.example demo/terraform.tfvars
+# Edit demo/terraform.tfvars — set ibmcloud_api_key
+
+# Spin up (~30–45 min)
+export IBMCLOUD_API_KEY=your_key_here   # or set it in terraform.tfvars
+./demo-up.sh
+
+# Tear down when done (stops all charges)
+./demo-down.sh
+```
+
+#### What `demo-up.sh` does
+
+1. Checks that `ibmcloud`, `terraform`, and `oc`/`kubectl` are installed
+2. Installs the IBM Cloud Kubernetes Service CLI plugin (`container-service`) if missing
+3. Logs into IBM Cloud with your API key via `ibmcloud login --apikey`
+4. Runs `terraform init → plan → apply` inside `demo/`
+5. Downloads the kubeconfig: `ibmcloud ks cluster config --cluster <id>`
+6. Runs `oc get nodes` to confirm the worker is ready
+7. Prints all Terraform outputs including the Ingress hostname and a cost reminder
+
+#### What `demo-down.sh` does
+
+1. Logs back into IBM Cloud
+2. Asks for a typed `yes` confirmation
+3. Runs `terraform destroy -auto-approve` to remove every resource
+4. Confirms no further charges will be incurred
+
+#### Prerequisites for the scripts
+
+| Tool | Install |
+|---|---|
+| `ibmcloud` CLI | https://cloud.ibm.com/docs/cli |
+| `terraform` ≥ 1.3 | https://developer.hashicorp.com/terraform/install |
+| `oc` (optional) | https://console.redhat.com/openshift/downloads |
+
+### Quick start — manual (Terraform only)
+
+```bash
+cd demo
+cp terraform.tfvars.demo.example terraform.tfvars
+# Edit terraform.tfvars — set ibmcloud_api_key
+
+terraform init
+terraform plan
+terraform apply   # ~30–45 min
+
+# Fetch kubeconfig after apply:
+ibmcloud ks cluster config --cluster $(terraform output -raw cluster_id)
+
+# When the demo is finished:
+terraform destroy
+```
+
