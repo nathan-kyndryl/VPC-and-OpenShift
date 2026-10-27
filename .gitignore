@@ -1,0 +1,150 @@
+# =============================================================================
+# .gitignore — VPC + OpenShift on IBM Cloud
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SECRETS & CREDENTIALS — never commit these
+# -----------------------------------------------------------------------------
+
+# Terraform variable files that contain secrets (API keys, passwords, etc.)
+terraform.tfvars
+*.tfvars
+*.tfvars.json
+
+# IBM Cloud API key files (created by: ibmcloud iam api-key-create --file ...)
+*.json
+!package.json
+!package-lock.json
+
+# Generic credential / key file patterns
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.csr
+apikey
+apikey.txt
+api_key
+api_key.txt
+ibmcloud_api_key
+credentials
+credentials.json
+.credentials
+.secrets
+secrets.json
+secret.json
+.env
+.env.*
+!.env.example
+
+# kubeconfig files (contain cluster certificates and tokens)
+kubeconfig
+kubeconfig.yaml
+*.kubeconfig
+kube.config
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+id_ecdsa
+id_ecdsa.pub
+*.ppk
+
+# -----------------------------------------------------------------------------
+# TERRAFORM
+# -----------------------------------------------------------------------------
+
+# Local .terraform directory (downloaded providers and modules — large, reproducible)
+**/.terraform/
+.terraform/
+
+# Terraform lock file is safe to commit; uncomment the line below only if you
+# intentionally want to exclude it (not recommended).
+# .terraform.lock.hcl
+
+# Terraform state files — contain sensitive resource data including passwords
+# and private keys embedded by some providers.
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+terraform.tfstate.d/
+
+# Crash and debug logs
+crash.log
+crash.*.log
+*.tflog
+
+# Saved plan files (may contain secrets from variable values)
+*.tfplan
+demo.tfplan
+
+# Override files (local developer customisations — not for sharing)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# -----------------------------------------------------------------------------
+# OPERATING SYSTEM
+# -----------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# EDITORS & IDEs
+# -----------------------------------------------------------------------------
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains (IntelliJ, GoLand, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+Session.vim
+.netrwhist
+
+# Emacs
+\#*\#
+.\#*
+*.elc
+auto-save-list
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# SHELL SCRIPT ARTEFACTS
+# -----------------------------------------------------------------------------
+
+# Temporary files written by demo-up.sh / demo-down.sh
+*.log
+nohup.out
