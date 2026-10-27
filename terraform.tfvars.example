@@ -1,0 +1,58 @@
+# Copy this file to terraform.tfvars and populate the values.
+# Never commit terraform.tfvars to source control — it contains secrets.
+
+# ---------------------------------------------------------------------------
+# Required
+# ---------------------------------------------------------------------------
+
+ibmcloud_api_key = "<YOUR_IBM_CLOUD_API_KEY>"
+region           = "us-south"           # e.g. us-east, eu-de, jp-tok
+
+# ---------------------------------------------------------------------------
+# Naming & Tagging
+# ---------------------------------------------------------------------------
+
+prefix              = "ocp-platform"
+resource_group_name = null              # null = create "${prefix}-rg"
+resource_tags       = ["env:production", "team:platform"]
+access_tags         = []
+
+# ---------------------------------------------------------------------------
+# VPC
+# ---------------------------------------------------------------------------
+
+vpc_name             = "vpc"
+enable_vpc_flow_logs = true             # set false to skip flow-log collector
+
+# Customise subnets if the defaults (10.x.x.0/24) conflict with your network.
+# subnets = { zone-1 = [...], zone-2 = [...], zone-3 = [...] }
+
+# ---------------------------------------------------------------------------
+# OpenShift Cluster
+# ---------------------------------------------------------------------------
+
+cluster_name            = "roks-cluster"
+ocp_version             = null          # null = IBM Cloud default
+disable_public_endpoint = false         # true = private-only cluster
+
+# Pod / service CIDRs — only set when the defaults clash with on-prem routes.
+# pod_subnet_cidr     = "172.30.0.0/16"
+# service_subnet_cidr = "172.21.0.0/16"
+
+# Worker pools — add more pool objects for additional node flavours.
+worker_pools = [
+  {
+    pool_name        = "default"
+    machine_type     = "bx2.4x16"   # 4 vCPU / 16 GB — adjust as needed
+    workers_per_zone = 2             # 2 workers × 3 zones = 6 total
+    operating_system = "REDHAT_8_64"
+    subnet_prefix    = "worker"      # targets subnets named "worker-zone-*"
+  }
+]
+
+# Cluster add-ons (uncomment to enable)
+# addons = {
+#   cluster-autoscaler = {}          # enable autoscaler with IBM defaults
+#   vpc-block-csi-driver = {}        # VPC block storage CSI driver
+#   vpc-file-csi-driver  = {}        # VPC file storage CSI driver
+# }
